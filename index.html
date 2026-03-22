@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>铁三角·手势机械手 — 武汉东湖学院</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0e17;
+            min-height: 100vh;
+            color: #e0e6ed;
+            overflow-x: hidden;
+        }
+        /* 微妙粒子背景 */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(0,180,216,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(72,149,239,0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(255,107,107,0.03) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        /* 顶部导航 */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 64px;
+            background: rgba(10,14,23,0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            z-index: 100;
+        }
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logo-img {
+            height: 40px;
+            filter: brightness(1.1);
+        }
+        .brand-text h1 {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: #fff;
+        }
+        .brand-text p {
+            font-size: 11px;
+            color: rgba(255,255,255,0.45);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .member-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.3s;
+        }
+        .member-card:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(0,180,216,0.3);
+        }
+        .member-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(255,255,255,0.15);
+        }
+        .member-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.85);
+        }
+        .member-role {
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+        }
+        /* 主内容区 */
+        .main {
+            position: relative;
+            z-index: 1;
+            padding-top: 84px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        /* 页面标题 */
+        .hero {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .hero h2 {
+            font-size: 28px;
+            font-weight: 300;
+            color: #fff;
+            letter-spacing: 2px;
+        }
+        .hero h2 span {
+            font-weight: 600;
+            background: linear-gradient(135deg, #00b4d8, #4895ef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.4);
+            margin-top: 8px;
+            letter-spacing: 0.5px;
+        }
+        /* 核心显示区：双画布 */
+        .display-area {
+            display: flex;
+            gap: 24px;
+            padding: 0 24px;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .panel {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+        .panel-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-header .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #00b4d8;
+            box-shadow: 0 0 8px rgba(0,180,216,0.5);
+        }
+        .panel-header span {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .camera-panel { width: 480px; }
+        .camera-panel .panel-body { position: relative; background: #000; }
+        #webcam {
+            width: 100%;
+            display: block;
+            transform: scaleX(-1);
+            min-height: 360px;
+            object-fit: cover;
+        }
+        #overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            transform: scaleX(-1);
+        }
+        .hand3d-panel { width: 400px; }
+        .hand3d-panel .panel-body {
+            height: 360px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #hand3d { width: 100%; height: 100%; }
+        /* 手势识别结果 */
+        .gesture-bar {
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 16px 32px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+        }
+        .gesture-icon {
+            font-size: 48px;
+            filter: drop-shadow(0 0 12px rgba(0,180,216,0.3));
+        }
+        .gesture-info h3 {
+            font-size: 18px;
+            font-weight: 500;
+            color: #fff;
+        }
+        .gesture-info p {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            margin-top: 4px;
+        }
+        /* 控制按钮 */
+        .controls {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+        }
+        .btn {
+            padding: 14px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #00b4d8, #4895ef);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(0,180,216,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,180,216,0.4); }
+        .btn-primary:disabled { background: #2a3441; box-shadow: none; cursor: not-allowed; color: rgba(255,255,255,0.3); }
+        .btn-ghost {
+            background: rgba(255,255,255,0.05);
+            color: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+        /* 聊天面板 */
+        .chat-panel {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 300px;
+            max-height: 360px;
+            background: rgba(14,18,26,0.95);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            overflow: hidden;
+            z-index: 99;
+        }
+        .chat-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chat-header .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #00c853;
+            box-shadow: 0 0 6px rgba(0,200,83,0.5);
+        }
+        .chat-header span {
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.8);
+        }
+        .chat-messages {
+            padding: 12px 16px;
+            max-height: 280px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-msg {
+            display: flex;
+            gap: 10px;
+            animation: msgIn 0.4s ease;
+        }
+        .chat-msg img {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .chat-msg-body {
+            background: rgba(255,255,255,0.06);
+            padding: 10px 14px;
+            border-radius: 4px 12px 12px 12px;
+            max-width: 220px;
+        }
+        .chat-msg-name {
+            font-size: 11px;
+            color: #00b4d8;
+            margin-bottom: 4px;
+        }
+        .chat-msg-text {
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+            line-height: 1.4;
+        }
+        @keyframes msgIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 底部 */
+        .footer {
+            text-align: center;
+            padding: 32px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.25);
+        }
+        /* 加载遮罩 */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #0a0e17;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            transition: opacity 0.6s;
+        }
+        .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+        .loader-ring {
+            width: 48px; height: 48px;
+            border: 3px solid rgba(0,180,216,0.15);
+            border-top-color: #00b4d8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay p {
+            margin-top: 20px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+        }
+        /* 摄像头占位 */
+        .cam-placeholder {
+            width: 100%;
+            height: 360px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.02);
+        }
+        .cam-placeholder .icon { font-size: 48px; opacity: 0.3; }
+        .cam-placeholder p { font-size: 13px; color: rgba(255,255,255,0.3); margin-top: 12px; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <!-- 加载 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader-ring"></div>
+        <p>初始化手势识别引擎...</p>
+    </div>
+
+    <!-- 顶部栏 -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <img src="assets/logo.png" class="logo-img" alt="武汉东湖学院">
+            <div class="brand-text">
+                <h1>手势机械手</h1>
+                <p>Hand Gesture Controller</p>
+            </div>
+        </div>
+        <div class="nav-right">
+            <div class="member-card">
+                <img src="assets/hao.png" class="member-avatar" alt="方浩">
+                <div>
+                    <div class="member-name">方浩</div>
+                    <div class="member-role">队长</div>
+                </div>
+            </div>
+            <div class="member-card">
+                <img src="assets/he.png" class="member-avatar" alt="何文轩">
+                <div>
+                    <div class="member-name">何文轩</div>
+                    <div class="member-role">开发</div>
+                </div>
+            </div>
+            <div class="member-card">
+                <img src="assets/zuo.png" class="member-avatar" alt="左小琼">
+                <div>
+                    <div class="member-name">左小琼</div>
+                    <div class="member-role">设计</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="main">
+        <div class="hero">
+            <h2>基于 <span>手势识别</span> 的虚拟机械手</h2>
+            <p>Real-time Hand Gesture Recognition & Robotic Hand Simulation</p>
+        </div>
+
+        <div class="display-area">
+            <!-- 摄像头 -->
+            <div class="panel camera-panel">
+                <div class="panel-header">
+                    <div class="dot"></div>
+                    <span>Camera Input</span>
+                </div>
+                <div class="panel-body">
+                    <div class="cam-placeholder" id="camPlaceholder">
+                        <div class="icon">📷</div>
+                        <p>点击下方按钮启动摄像头</p>
+                    </div>
+                    <video id="webcam" autoplay playsinline style="display:none;"></video>
+                    <canvas id="overlay"></canvas>
+                </div>
+            </div>
+
+            <!-- 3D机械手 -->
+            <div class="panel hand3d-panel">
+                <div class="panel-header">
+                    <div class="dot" style="background:#ff6b6b;box-shadow:0 0 8px rgba(255,107,107,0.5);"></div>
+                    <span>Robotic Hand</span>
+                </div>
+                <div class="panel-body">
+                    <div id="hand3d"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 手势结果 -->
+        <div class="gesture-bar">
+            <div class="gesture-icon" id="gestureEmoji">🤚</div>
+            <div class="gesture-info">
+                <h3 id="gestureName">等待识别</h3>
+                <p id="gestureDesc">点击"启动"按钮开始手势识别</p>
+            </div>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn" onclick="startCamera()">启动识别</button>
+            <button class="btn btn-ghost" onclick="resetHand()">重置</button>
+        </div>
+    </div>
+
+    <!-- 聊天面板 -->
+    <div class="chat-panel">
+        <div class="chat-header">
+            <div class="status-dot"></div>
+            <span>铁三角 · 群聊</span>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- 动态插入 -->
+        </div>
+    </div>
+
+    <div class="footer">
+        武汉东湖学院 · 铁三角团队 · 手势机械手演示系统
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+    <script>
+    // ============ 数据 ============
+    const teamMembers = [
+        { name: '方浩', img: 'assets/hao.png' },
+        { name: '何文轩', img: 'assets/he.png' },
+        { name: '左小琼', img: 'assets/zuo.png' },
+    ];
+
+    const chatLines = [
+        { member: 0, text: '大家好，我是浩哥！✌️' },
+        { member: 1, text: '文轩到！今天搞手势识别！' },
+        { member: 2, text: '小琼来了，机械手好酷🤖' },
+        { member: 0, text: '试试比个耶看看效果' },
+        { member: 1, text: '握拳可以变成拳头哦👊' },
+        { member: 2, text: '张开手像在击掌🙌' },
+        { member: 0, text: '识别到了！真棒！👏' },
+        { member: 1, text: '这个可以做比赛展示！' },
+        { member: 2, text: '我觉得加点灯光效果更好' },
+    ];
+
+    let scene, camera3d, renderer, handGroup;
+    let isRunning = false;
+    let chatIdx = 0;
+
+    // ============ 3D 手 ============
+    function init3D() {
+        const box = document.getElementById('hand3d');
+        const w = box.clientWidth, h = box.clientHeight;
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0e1220);
+
+        camera3d = new THREE.PerspectiveCamera(45, w/h, 0.1, 100);
+        camera3d.position.set(0, 3, 7);
+        camera3d.lookAt(0, 0, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        box.appendChild(renderer.domElement);
+
+        // 灯光
+        scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+        const key = new THREE.DirectionalLight(0x4895ef, 0.9);
+        key.position.set(4, 8, 6);
+        scene.add(key);
+        const rim = new THREE.DirectionalLight(0x00b4d8, 0.5);
+        rim.position.set(-4, 4, -4);
+        scene.add(rim);
+
+        // 材质
+        const matPalm = new THREE.MeshStandardMaterial({ color: 0x2a3441, metalness: 0.7, roughness: 0.3 });
+        const matJoint = new THREE.MeshStandardMaterial({ color: 0x00b4d8, metalness: 0.5, roughness: 0.4, emissive: 0x003844 });
+        const matTip = new THREE.MeshStandardMaterial({ color: 0x4895ef, metalness: 0.6, roughness: 0.3, emissive: 0x1a3a6c });
+
+        handGroup = new THREE.Group();
+
+        // 手掌
+        const palmGeo = new THREE.BoxGeometry(1.4, 0.25, 1.8);
+        palmGeo.translate(0, 0, 0);
+        const palm = new THREE.Mesh(palmGeo, matPalm);
+        handGroup.add(palm);
+
+        // 手掌圆角装饰
+        const palmDotGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.01, 16);
+        [[-0.5, 0.14, 0.6], [0.5, 0.14, 0.6], [-0.5, 0.14, -0.6], [0.5, 0.14, -0.6]].forEach(p => {
+            const dot = new THREE.Mesh(palmDotGeo, matJoint);
+            dot.position.set(...p);
+            handGroup.add(dot);
+        });
+
+        // 手指定义
+        const fingerDefs = [
+            { x: -0.75, z: 0.6, len: 1.1, tipR: 0.10 },
+            { x: -0.38, z: -0.9, len: 1.2, tipR: 0.10 },
+            { x: 0.0,   z: -1.0, len: 1.3, tipR: 0.11 },
+            { x: 0.38,  z: -0.9, len: 1.2, tipR: 0.10 },
+            { x: 0.75,  z: -0.6, len: 1.0, tipR: 0.09 },
+        ];
+
+        handGroup.fingers = [];
+
+        fingerDefs.forEach((f, i) => {
+            const pivot = new THREE.Group();
+            pivot.position.set(f.x, 0, f.z);
+
+            // 指骨
+            const boneLen = f.len * 0.5;
+            const boneGeo = new THREE.CylinderGeometry(0.07, 0.08, boneLen, 8);
+            boneGeo.rotateX(Math.PI / 2);
+            boneGeo.translate(0, 0, -boneLen / 2);
+            const bone = new THREE.Mesh(boneGeo, i === 0 ? matJoint : matPalm);
+            pivot.add(bone);
+
+            // 指尖
+            const tipGeo = new THREE.SphereGeometry(f.tipR, 12, 12);
+            tipGeo.translate(0, 0, -boneLen);
+            const tip = new THREE.Mesh(tipGeo, matTip);
+            pivot.add(tip);
+
+            // 指关节
+            const jointGeo = new THREE.SphereGeometry(0.09, 12, 12);
+            const joint = new THREE.Mesh(jointGeo, matJoint);
+            pivot.add(joint);
+
+            handGroup.add(pivot);
+            handGroup.fingers.push(pivot);
+        });
+
+        handGroup.position.y = -0.3;
+        scene.add(handGroup);
+
+        // 地面网格
+        const grid = new THREE.GridHelper(12, 20, 0x1a2636, 0x0e1220);
+        grid.position.y = -1.2;
+        scene.add(grid);
+
+        // 地面反射光
+        const planeGeo = new THREE.PlaneGeometry(12, 12);
+        const planeMat = new THREE.MeshStandardMaterial({ color: 0x0a0e17, metalness: 0.9, roughness: 0.2, transparent: true, opacity: 0.6 });
+        const plane = new THREE.Mesh(planeGeo, planeMat);
+        plane.rotation.x = -Math.PI / 2;
+        plane.position.y = -1.19;
+        scene.add(plane);
+
+        animate();
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (handGroup) {
+            handGroup.rotation.y += 0.003;
+        }
+        renderer.render(scene, camera3d);
+    }
+
+    function update3DHand(landmarks) {
+        if (!landmarks || !handGroup) return;
+
+        // 手掌朝向
+        const wrist = landmarks[0];
+        const mid = landmarks[9];
+        handGroup.rotation.y = Math.PI - Math.atan2(mid.x - wrist.x, mid.z - wrist.z);
+
+        // 手指弯曲
+        const tips = [4, 8, 12, 16, 20];
+        const pips = [3, 6, 10, 14, 18];
+
+        tips.forEach((tipIdx, i) => {
+            if (i === 0) {
+                // 拇指
+                const bend = (landmarks[tipIdx].x - landmarks[2].x) * 2;
+                handGroup.fingers[0].rotation.z = bend * Math.PI / 3;
+            } else {
+                const tip = landmarks[tipIdx];
+                const pip = landmarks[pips[i]];
+                const bend = Math.max(0, (tip.y - pip.y) * 4);
+                handGroup.fingers[i].rotation.x = bend * Math.PI / 2.5;
+            }
+        });
+    }
+
+    // ============ 手势识别 ============
+    function recognizeGesture(lm) {
+        const ext = [
+            Math.abs(lm[4].x - lm[2].x) > 0.06,
+            lm[8].y < lm[6].y,
+            lm[12].y < lm[10].y,
+            lm[16].y < lm[14].y,
+            lm[20].y < lm[18].y,
+        ];
+        const all = ext.every(e => e);
+        const none = ext.every(e => !e);
+        const ok = ext[1] && ext[2] && !ext[3] && !ext[4];
+        const point = ext[1] && !ext[2] && !ext[3] && !ext[4];
+        const thumb = ext[0] && !ext[1] && !ext[2] && !ext[3] && !ext[4];
+        const rock = ext[0] && ext[4] && !ext[1] && !ext[2] && !ext[3];
+
+        if (all) return { name: '张开手掌', emoji: '🖐️', desc: 'High Five！全部手指伸直' };
+        if (none) return { name: '握拳', emoji: '👊', desc: '力量！全部手指弯曲' };
+        if (ok) return { name: '比耶', emoji: '✌️', desc: 'Peace！食指中指伸直' };
+        if (point) return { name: '指向', emoji: '👆', desc: '方向指引！仅食指伸直' };
+        if (thumb) return { name: '点赞', emoji: '👍', desc: 'Thumbs Up！' };
+        if (rock) return { name: '摇滚', emoji: '🤘', desc: 'Rock On！拇指和小指伸出' };
+        return { name: '识别中', emoji: '🤚', desc: '尝试其他手势...' };
+    }
+
+    // ============ 2D 绘制 ============
+    function drawHand2D(lm) {
+        const canvas = document.getElementById('overlay');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const conns = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
+        const w = canvas.width, h = canvas.height;
+
+        // 连线
+        ctx.lineWidth = 2;
+        conns.forEach(([a,b]) => {
+            const grad = ctx.createLinearGradient(lm[a].x*w, lm[a].y*h, lm[b].x*w, lm[b].y*h);
+            grad.addColorStop(0, 'rgba(0,180,216,0.8)');
+            grad.addColorStop(1, 'rgba(72,149,239,0.8)');
+            ctx.strokeStyle = grad;
+            ctx.beginPath();
+            ctx.moveTo(lm[a].x*w, lm[a].y*h);
+            ctx.lineTo(lm[b].x*w, lm[b].y*h);
+            ctx.stroke();
+        });
+
+        // 关键点
+        lm.forEach((p, i) => {
+            ctx.beginPath();
+            const r = [4,8,12,16,20].includes(i) ? 6 : 4;
+            ctx.arc(p.x*w, p.y*h, r, 0, Math.PI*2);
+            ctx.fillStyle = [4,8,12,16,20].includes(i) ? '#ff6b6b' : '#00b4d8';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        });
+    }
+
+    // ============ 摄像头 ============
+    async function startCamera() {
+        const video = document.getElementById('webcam');
+        const btn = document.getElementById('startBtn');
+        const placeholder = document.getElementById('camPlaceholder');
+
+        btn.disabled = true;
+        btn.textContent = '启动中...';
+
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+            video.srcObject = stream;
+            video.style.display = 'block';
+            placeholder.style.display = 'none';
+            await video.play();
+
+            const canvas = document.getElementById('overlay');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            const hands = new Hands({
+                locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+            });
+            hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.5 });
+            hands.onResults(onResults);
+
+            const cam = new Camera(video, {
+                onFrame: async () => { await hands.send({ image: video }); },
+                width: 640, height: 480
+            });
+            cam.start();
+
+            isRunning = true;
+            btn.textContent = '运行中';
+            startChat();
+            document.getElementById('loadingOverlay').classList.add('hidden');
+
+        } catch(e) {
+            btn.disabled = false;
+            btn.textContent = '启动识别';
+            alert('摄像头启动失败: ' + e.message);
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+    }
+
+    function onResults(res) {
+        if (!res.multiHandLandmarks || !res.multiHandLandmarks.length) {
+            document.getElementById('gestureEmoji').textContent = '✋';
+            document.getElementById('gestureName').textContent = '未检测到手';
+            document.getElementById('gestureDesc').textContent = '将手放在摄像头前';
+            return;
+        }
+
+        res.multiHandLandmarks.forEach(lm => {
+            drawHand2D(lm);
+            update3DHand(lm);
+            const g = recognizeGesture(lm);
+            document.getElementById('gestureEmoji').textContent = g.emoji;
+            document.getElementById('gestureName').textContent = g.name;
+            document.getElementById('gestureDesc').textContent = g.desc;
+        });
+    }
+
+    // ============ 聊天 ============
+    function addChatMsg(memberIdx, text) {
+        const m = teamMembers[memberIdx];
+        const container = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg';
+        div.innerHTML = `
+            <img src="${m.img}" alt="${m.name}">
+            <div class="chat-msg-body">
+                <div class="chat-msg-name">${m.name}</div>
+                <div class="chat-msg-text">${text}</div>
+            </div>
+        `;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+
+        // 最多保留15条
+        while (container.children.length > 15) container.removeChild(container.firstChild);
+    }
+
+    function startChat() {
+        addChatMsg(0, '手势识别启动了！大家试试看 🎉');
+        setInterval(() => {
+            if (!isRunning) return;
+            const line = chatLines[chatIdx % chatLines.length];
+            addChatMsg(line.member, line.text);
+            chatIdx++;
+        }, 6000);
+    }
+
+    function resetHand() {
+        document.getElementById('gestureEmoji').textContent = '🤚';
+        document.getElementById('gestureName').textContent = '等待识别';
+        document.getElementById('gestureDesc').textContent = '点击"启动"按钮开始';
+    }
+
+    // ============ 初始化 ============
+    window.addEventListener('load', () => {
+        init3D();
+        setTimeout(() => document.getElementById('loadingOverlay').classList.add('hidden'), 2000);
+    });
+
+    window.addEventListener('resize', () => {
+        const box = document.getElementById('hand3d');
+        if (renderer && box) {
+            renderer.setSize(box.clientWidth, box.clientHeight);
+            camera3d.aspect = box.clientWidth / box.clientHeight;
+            camera3d.updateProjectionMatrix();
+        }
+    });
+    </script>
+</body>
+</html>
